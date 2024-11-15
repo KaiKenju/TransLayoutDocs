@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     container_name: 'translation-app-frontend'
@@ -11,7 +9,8 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./Frontend/:/translation-app-frontend/
+      - ./Frontend:/translation-app-frontend
+      - /translation-app-frontend/node_modules
     command: yarn dev
     network_mode: "host"
 

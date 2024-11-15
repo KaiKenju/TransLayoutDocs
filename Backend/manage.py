@@ -3,6 +3,11 @@
 import os
 import sys
 
+folder_path = "static"
+
+# Check if folder exists, if not, create it
+os.makedirs(folder_path, exist_ok=True)
+
 
 def main():
     """Run administrative tasks."""

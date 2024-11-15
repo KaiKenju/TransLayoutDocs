@@ -32,10 +32,13 @@ storage_bucket = settings.STORAGE_BUCKET
 avatar_folder = os.path.join(settings.MEDIA_ROOT, "Avatars")
 pdf_folder = os.path.join(settings.MEDIA_ROOT, "PDFs")
 
+print(credential_json)
+print(storage_bucket)
+
 obj = TranslationLayoutRecovery()
 
 # Init firebase with your credentials
-if not firebase_admin._apps:
+if not firebase_admin.get_app():
     cred = credentials.Certificate(credential_json)
     initialize_app(cred, {"storageBucket": storage_bucket})
 
@@ -176,76 +179,64 @@ class GetUserPDFs(APIView):
                 {"status": "success", "data": ans}, status=status.HTTP_200_OK
             )
         except Exception as e:
-            print(e)
+            import traceback
+            print(f"Error: {e}")
+            traceback.print_exc()
             return Response(
-                {"status": "error", "data": "Invalid request"},
+                {"status": "error", "data": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
 
 class CreatePDF(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
-        """
-        Handles a POST request to upload a PDF file.
-
-        Parameters:
-            request (HttpRequest): The HTTP request object.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            Response: The HTTP response object.
-
-        Raises:
-            Exception: If there is an error processing the request.
-        """
         try:
             pdf_data = request.data
-            user_id = pdf_data["user_id"]
-            file = pdf_data["file"]
-            language = pdf_data["language"]
+            user_id = pdf_data.get("user_id")
+            file = pdf_data.get("file")
+            language = pdf_data.get("language")
 
-            # get file name
-            pdf_name = str(file).split(".")[0] + "_" + str(time.time()).split(".")[0] + ".pdf"
-            # save file to pdf folder
-            save_uploaded_file(file, pdf_name, pdf_folder)
-            # upload file just saved to firebase storage
-            fileName = os.path.join(pdf_folder, pdf_name)
+            # Validate input data
+            if not user_id or not file or not language:
+                return Response({"status": "error", "data": "Missing fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Generate unique PDF name
+            import uuid
+            pdf_name = f"{uuid.uuid4()}.pdf"
+
+            # Upload file directly to Firebase
             bucket = storage.bucket()
             blob = bucket.blob(pdf_name)
-            blob.upload_from_filename(fileName)
-
-            # make public access from the URL
+            blob.upload_from_file(file, content_type='application/pdf')
             blob.make_public()
+            public_url = blob.public_url
 
-            # delete avatar just saved from avatar folder
-            # os.remove(fileName)
-
+            # Save PDF details in the database
             if User.objects.filter(user_id=user_id).exists():
-                current_data = {}
-                current_data["owner_id"] = user_id
-                current_data["file_name"] = str(file)
-                current_data["file"] = blob.public_url
-                current_data["language"] = language
-                print(len(str(current_data["file"])))
-
+                current_data = {
+                    "owner_id": user_id,
+                    "file_name": str(file),
+                    "file": public_url,
+                    "language": language,
+                }
                 pdf_serializer = PDFSerializer(data=current_data)
                 if pdf_serializer.is_valid():
                     pdf_serializer.save()
                     return Response(
                         {"status": "success", "data": pdf_serializer.data},
-                        status=status.HTTP_200_OK,
+                        status=status.HTTP_200_OK
                     )
-                print(pdf_serializer.errors)
                 return Response(
                     {"status": "error", "data": pdf_serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=status.HTTP_400_BAD_REQUEST
                 )
         except Exception as e:
-            print(e)
+            print(f"Error in CreatePDF: {e}")
             return Response(
-                {"status": "error", "data": "Invalid request"},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"status": "error", "data": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -356,9 +347,11 @@ class ProcessTranslation(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         except Exception as e:
-            print(e)
+            import traceback
+            print(f"Error: {e}")
+            traceback.print_exc()
             return Response(
-                {"status": "failure", "data": "Invalid request"},
+                {"status": "error", "data": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -443,9 +436,12 @@ class FeedbackPDF(APIView):
                     {"status": "error", "data": "Invalid user or translation"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        except:
+        except Exception as e:
+            import traceback
+            print(f"Error: {e}")
+            traceback.print_exc()
             return Response(
-                {"status": "error", "data": "Invalid request"},
+                {"status": "error", "data": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -482,9 +478,12 @@ class FeedbackPDF(APIView):
                     {"status": "error", "data": "Invalid user or translation"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        except:
+        except Exception as e:
+            import traceback
+            print(f"Error: {e}")
+            traceback.print_exc()
             return Response(
-                {"status": "error", "data": "Invalid request"},
+                {"status": "error", "data": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -513,9 +512,12 @@ class FeedbackPDF(APIView):
                 return Response(
                     {"status": "success", "data": res}, status=status.HTTP_200_OK
                 )
-        except:
+        except Exception as e:
+            import traceback
+            print(f"Error: {e}")
+            traceback.print_exc()
             return Response(
-                {"status": "error", "data": "Invalid request"},
+                {"status": "error", "data": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -566,8 +568,11 @@ class HistoryView(APIView):
                     {"status": "User not found!", "data": "Invalid user"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        except:
+        except Exception as e:
+            import traceback
+            print(f"Error: {e}")
+            traceback.print_exc()
             return Response(
-                {"status": "error", "data": "Invalid request"},
+                {"status": "error", "data": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
