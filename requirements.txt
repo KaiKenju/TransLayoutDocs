@@ -1,0 +1,4 @@
+paddlepaddle -i https://mirror.baidu.com/pypi/simple
+paddleocr>=2.6.0.3
+paddleclas>=2.4.3
+# will update soon
