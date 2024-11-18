@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import time
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -14,18 +15,39 @@ from dotenv import load_dotenv
 from django.conf import settings
 from PIL import Image
 import base64
+import stat
 
 # Load the environment variables from the .env file
 load_dotenv()
 
 credential_json = settings.CREDENTIAL_JSON
 storage_bucket = settings.STORAGE_BUCKET
-avatar_folder = os.path.join(settings.MEDIA_ROOT, "Avatars")
-pdf_folder = os.path.join(settings.MEDIA_ROOT, "PDFs")
+
+media_root = Path(settings.MEDIA_ROOT)
+avatar_folder = media_root / "Avatars"
+pdf_folder = media_root / "PDFs"
+
+def set_folder_permissions(folder: Path):
+    if folder.exists():
+        # Set read, write, and execute permissions for the owner
+        os.chmod(folder, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+        print(f"Permissions set for folder: {folder}")
+
+def ensure_folders_exist():
+    media_root.mkdir(parents=True, exist_ok=True)
+    avatar_folder.mkdir(parents=True, exist_ok=True)
+    pdf_folder.mkdir(parents=True, exist_ok=True)
+
+    # Set permissions for each folder
+    set_folder_permissions(media_root)
+    set_folder_permissions(avatar_folder)
+    set_folder_permissions(pdf_folder)
+
+    print(f"Ensured folders: {media_root}, {avatar_folder}, {pdf_folder}")
 
 # Init firebase with your credentials
 if not firebase_admin._apps:
-    cred = credentials.Certificate(credential_json)
+    cred = credentials.Certificate("../firebase.json")
     initialize_app(cred, {'storageBucket': storage_bucket})
 
 def save_uploaded_file(uploaded_file , destination_path, file_name):

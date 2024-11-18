@@ -22,6 +22,8 @@ import cv2
 import os
 import fitz
 import easyocr
+# from paddleocr import PaddleOCR
+import time
 
 from Backend.services.settings import MEDIA_ROOT
 
@@ -40,7 +42,7 @@ CATEGORIES2LABELS = {
     4: "table",
     5: "figure"
 }
-MODEL_PATH = os.path.join(os.getcwd(), "model_196000.pth")
+MODEL_PATH = "D:/dev/translation_layoutrecovery/Backend/model_196000.pth"
 def get_instance_segmentation_model(num_classes):
     '''
     This function returns a Mask R-CNN model with a ResNet-50-FPN backbone.
@@ -100,69 +102,45 @@ class TranslationLayoutRecovery:
         return False
 
     def translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
-        """Backend function for translating PDF files.
-
-        Translation is performed in the following steps:
-            1. Convert the PDF file to images
-            2. Detect text blocks in the images
-            3. For each text block, detect text and translate it
-            4. Draw the translated text on the image
-            5. Save the image as a PDF file
-            6. Merge all PDF files into one PDF file
-
-        At 3, this function does not translate the text after
-        the references section. Instead, saves the image as it is.
-
-        Parameters
-        ----------
-        input_path: Union[Path, bytes]
-            Path to the input PDF file or bytes of the input PDF file
-        output_path: Path
-            Path to the output directory
-        """
-        pdf_images = convert_from_path(input_path, dpi=self.DPI)
+        """Backend function for translating PDF files."""
+        pdf_images = convert_from_path(
+            input_path, 
+            dpi=self.DPI, 
+            poppler_path=r"D:\dev\translation_layoutrecovery\Backend\poppler-24.08.0\Library\bin"
+        )
+        
         print("Language:", language)
         self.language = language
         pdf_files = []
         reached_references = False
-        
-        # Batch
+
+        # Batch processing
         idx = 0
         file_id = 0
         batch_size = 8
-        for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
-            image_list = pdf_images[idx:idx+batch_size]
+
+        for _ in tqdm(range(math.ceil(len(pdf_images) / batch_size))):
+            image_list = pdf_images[idx:idx + batch_size]
             if not reached_references:
                 image_list, reached_references = self._translate_multiple_pages(
                     image_list=image_list,
                     reached_references=reached_references,
                 )
-                if merge:
-                    # merge original and translated images into 1 page
-                    for _, [translated_image, original_image] in enumerate(image_list):
-                        saved_output_path = os.path.join(output_path,f"{file_id:03}.pdf")
-                        fig, ax = plt.subplots(1, 2, figsize=(20, 14))
-                        ax[0].imshow(original_image)
-                        ax[1].imshow(translated_image)
-                        ax[0].axis("off")
-                        ax[1].axis("off")
-                        plt.tight_layout()
-                        plt.savefig(saved_output_path, format="pdf", dpi=self.DPI)
-                        plt.close(fig)
-                        pdf_files.append(saved_output_path)
-                        file_id += 1
-                else:
-                    # convert image to pdf
-                    for _, [translated_image, _] in enumerate(image_list):
-                        saved_output_path = os.path.join(output_path,f"{file_id:03}.pdf")
-                        pil_image = Image.fromarray(translated_image)
-                        pil_image = pil_image.convert("RGB")
+
+                # Save translated pages to PDF files
+                for translated_image, original_image in image_list:
+                    saved_output_path = os.path.join(output_path, f"{file_id:03}.pdf")
+                    with fitz.open() as pdf_writer:
+                        pil_image = Image.fromarray(translated_image).convert("RGB")
                         pil_image.save(saved_output_path)
                         pdf_files.append(saved_output_path)
-                        file_id += 1
+                    file_id += 1
+
             idx += batch_size
-            
-        self._merge_pdfs(pdf_files)
+
+        # Merge all PDFs if required
+        if merge:
+            self._merge_pdfs(pdf_files)
 
     def _load_init(self):
         """Backend function for loading models.
@@ -189,7 +167,7 @@ class TranslationLayoutRecovery:
             raise Exception("Model weights not found.")
 
         assert os.path.exists(self.checkpoint_path)
-        checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
+        checkpoint = torch.load(self.checkpoint_path, map_location='cuda:0')
         self.pub_model.load_state_dict(checkpoint['model'])
         self.pub_model = self.pub_model.to("cuda")
         self.pub_model.eval()
@@ -199,10 +177,10 @@ class TranslationLayoutRecovery:
         self.ocr_model = easyocr.Reader(['en'], gpu=True)
         
         # Translation model
-        self.translate_model_ja = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-jap").to("cuda")
-        self.translate_tokenizer_ja = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-jap")
+        # self.translate_model_ja = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-jap").to("cuda:0")
+        # self.translate_tokenizer_ja = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-jap")
         
-        self.translate_model_vi = AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation").to("cuda")
+        self.translate_model_vi = AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation").to("cuda:0")
         self.translate_tokenizer_vi = AutoTokenizer.from_pretrained("VietAI/envit5-translation")
 
         self.transform = transforms.Compose([
@@ -497,24 +475,20 @@ class TranslationLayoutRecovery:
         return result
 
     def _merge_pdfs(self, pdf_files: List[str]) -> None:
-        """Merge the translated PDF files into one file
-        by using fitz
+        """Merge the translated PDF files into one file using fitz."""
+        # Ensure the target directory exists
+        output_dir = os.path.join(MEDIA_ROOT, "PDFs")
+        os.makedirs(output_dir, exist_ok=True)  # Create the directory if it doesn't exist
 
-        Merged file will be stored in the directory in BACKEND
-        as "fitz_translated.pdf".
-
-        Parameters
-        ----------
-        pdf_files: List[str]
-            List of paths to translated PDF files stored in
-            the temp directory.
-        """
+        output_file = os.path.join(output_dir, "fitz_translated.pdf")
+        
         result = fitz.open()
         for pdf_file in sorted(pdf_files):
             with fitz.open(pdf_file) as f:
                 result.insert_pdf(f)
-                os.remove(pdf_file)
-        result.save(os.path.join(MEDIA_ROOT, "PDFs", "fitz_translated.pdf"))
+        result.save(output_file)
+        result.close()
+        print(f"Saved merged PDF to {output_file}")
 
 if __name__ == "__main__":
     obj = TranslationLayoutRecovery()

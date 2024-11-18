@@ -174,3 +174,8 @@ PDFs/
 Avatars/
 
 .vscode/
+
+Backend/poppler-24.08.0
+firebase.json
+*.pdf
+

@@ -3,6 +3,9 @@
 import os
 import sys
 
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
 folder_path = "static"
 
 # Check if folder exists, if not, create it
