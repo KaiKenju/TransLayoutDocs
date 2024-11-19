@@ -38,7 +38,7 @@ from tqdm import tqdm
 table_engine = PPStructure(recovery=True, lang='en')
 
 # Đường dẫn thư mục lưu trữ
-save_folder = './doc_en1'
+save_folder = './store_data'
 os.makedirs(save_folder, exist_ok=True)
 
 # Hàm xử lý từng trang PDF
