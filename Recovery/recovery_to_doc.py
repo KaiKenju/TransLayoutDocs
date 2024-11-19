@@ -14,13 +14,14 @@
 
 import os
 from copy import deepcopy
-
+import cv2
 from docx import Document
 from docx import shared
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.section import WD_SECTION
 from docx.oxml.ns import qn
 from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.shared import Inches
 
 from Recovery.table_process import HtmlToDocx
 
@@ -33,12 +34,12 @@ def convert_info_docx(img, res, save_folder, img_name):
     doc = Document()
     doc.styles["Normal"].font.name = "Times New Roman"
     doc.styles["Normal"]._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
-    doc.styles["Normal"].font.size = shared.Pt(6.5)
+    doc.styles["Normal"].font.size = shared.Pt(12)
 
     flag = 1
     for i, region in enumerate(res):
-        if len(region["res"]) == 0:
-            continue
+        # if len(region["res"]) == 0:
+        #     continue
         img_idx = region["img_idx"]
         if flag == 2 and region["layout"] == "single":
             section = doc.add_section(WD_SECTION.CONTINUOUS)
@@ -49,25 +50,63 @@ def convert_info_docx(img, res, save_folder, img_name):
             section._sectPr.xpath("./w:cols")[0].set(qn("w:num"), "2")
             flag = 2
 
-        if region["type"].lower() == "figure":
+        # if region["type"].lower() == "figure":
+        #     excel_save_folder = os.path.join(save_folder, img_name)
+        #     img_path = os.path.join(
+        #         excel_save_folder, "{}_{}.jpg".format(region["bbox"], img_idx)
+        #     )
+        #     paragraph_pic = doc.add_paragraph()
+        #     paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        #     run = paragraph_pic.add_run("")
+        #     if flag == 1:
+        #         run.add_picture(img_path, width=shared.Inches(5))
+        #     elif flag == 2:
+        #         run.add_picture(img_path, width=shared.Inches(2))
+        if str(region.get("type", "")).lower() == "figure":
             excel_save_folder = os.path.join(save_folder, img_name)
+            if not os.path.exists(excel_save_folder):
+                os.makedirs(excel_save_folder)
+
+            # Tạo đường dẫn ảnh
+            bbox = region.get("bbox", "default_bbox")
+            img_idx = region.get("img_idx", "default_idx")
             img_path = os.path.join(
-                excel_save_folder, "{}_{}.jpg".format(region["bbox"], img_idx)
+                excel_save_folder, "{}_{}.jpg".format(bbox, img_idx)
             )
-            paragraph_pic = doc.add_paragraph()
-            paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run = paragraph_pic.add_run("")
-            if flag == 1:
-                run.add_picture(img_path, width=shared.Inches(5))
-            elif flag == 2:
-                run.add_picture(img_path, width=shared.Inches(2))
+
+            # Kiểm tra file ảnh
+            if not os.path.exists(img_path):
+                print("\n")
+                print(f"Ảnh không tồn tại: {img_path}")
+                continue
+
+            # Kiểm tra kích thước ảnh
+            img = cv2.imread(img_path)
+            if img is None or img.shape[0] < 10 or img.shape[1] < 10:
+                print("\n")
+                print(f"Ảnh quá nhỏ hoặc không tồn tại: {img_path}")
+                continue
+
+            # Thêm ảnh vào Word
+            if os.path.exists(img_path):
+                paragraph_pic = doc.add_paragraph()
+                paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = paragraph_pic.add_run("")
+                if flag == 1:
+                    run.add_picture(img_path, width=Inches(5))
+                elif flag == 2:
+                    run.add_picture(img_path, width=Inches(2.6))
+            else:
+                print(f"Ảnh không tồn tại tại đường dẫn: {img_path}")
+
+        
         elif region["type"].lower() == "title":
             doc.add_heading(region["res"][0]["text"])
         elif region["type"].lower() == "table":
             parser = HtmlToDocx()
             parser.table_style = "TableGrid"
             parser.handle_table(region["res"]["html"], doc)
-        elif region["type"] == "equation" and "latex" in region["res"]:
+        elif region["type"] == "equation" and "latex" in region["res"]: # fix nốt với các công thức
             pass
         else:
             paragraph = doc.add_paragraph()
@@ -76,7 +115,7 @@ def convert_info_docx(img, res, save_folder, img_name):
                 if i == 0:
                     paragraph_format.first_line_indent = shared.Inches(0.25)
                 text_run = paragraph.add_run(line["text"] + " ")
-                text_run.font.size = shared.Pt(10)
+                text_run.font.size = shared.Pt(12)
 
     # save to docx
     docx_path = os.path.join(save_folder, "{}_ocr.docx".format(img_name))
