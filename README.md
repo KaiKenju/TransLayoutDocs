@@ -15,14 +15,17 @@ Phá triển  TableEngine của PaddleOCR để khôi phục bố cục và hỗ
 
 > **Related Projects**：
 >
-> - [Recognition-table-with-table-transformer](https://github.com/KaiKenju/Recognition-Table-with-Table_Transformer-and-vietOCR): The combination of Table Transformer and vietOCR creates a powerful table recognition system that extracts table structure from images and simultaneously recognizes Vietnamese characters. Table Transformer handles table layout and structure, while vietOCR focuses on accurate character recognition, providing high accuracy in extracting table data from Vietnamese documents.
+> - [Recognition-table-with-table-transformer](https://github.com/KaiKenju/Recognition-Table-with-Table_Transformer-and-vietOCR): A system combining Table Transformer and vietOCR for accurate table structure and Vietnamese character recognition from images.
 >
-> - [Vietnamese_OCR_documents](https://github.com/KaiKenju/Vietnamese_OCR_documents): is used to convert text from images or scanned documents into digital format, allowing automatic processing and analysis of text data. This technology is very useful in extracting information from Vietnamese documents, making information searching and management easier and more efficient.
+> - [Vietnamese_OCR_documents](https://github.com/KaiKenju/Vietnamese_OCR_documents): Converts text from images or scans into digital format, streamlining Vietnamese text processing and information management.
 <br>
 
 <br>
 
 # Table of Contents
+
+# Dependencies
+- Python > 3.6
 
 # Introduction
 <div align="center">
@@ -55,3 +58,5 @@ pip install -r requirements.txt
 ```[bash]
 python main.py
 ```
+
+Still update
