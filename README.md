@@ -1,18 +1,7 @@
-<p align="center">
-  <h1 align="center"> 5tasy</h1>
-  <h4 align="center" style="font-weight: bold; font-style: italic">A web app for Paper Translation with Layout Recovery!</h4>
-</p>
-
-### Contributors
-|            Name               | Profile 
-|----------------|-------------------------------
-|Phạm Khánh Trình | [@phkhanhtrinh23](https://github.com/phkhanhtrinh23)
-|Nguyễn Bảo Tín | [@nbtin](https://github.com/nbtin)
-|Yang Tuấn Anh | [@YangTuanAnh](https://github.com/YangTuanAnh)
-|Nguyễn Hoàng Ngọc Hà | [@ngochafromdn](https://github.com/ngochafromdn)
-|Nguyễn Minh Lý | [@lynguyenminh](https://github.com/lynguyenminh)
+# Translation with Layout Recovery
 
 ## 1. Table of Contents
+
 - [1. Table of Contents](#1-table-of-contents)
 - [2. About The Project](#2-about-the-project)
 - [3. Technical Overview](#3-technical-overview)
@@ -37,8 +26,10 @@ Translation with Layout Recovery is a cutting-edge approach in the field of natu
    - **Layout Recovery:** MaskRCNN.
    - **OCR:** EasyOCR.
    - **Spelling Correction (Japanese)**: [JGEC](https://github.com/phkhanhtrinh23/JGEC)
+
 ## 4. Repo Structure
-```
+
+```[bash]
 .
 ├── Backend
 │   ├── account
@@ -63,6 +54,7 @@ Translation with Layout Recovery is a cutting-edge approach in the field of natu
 ```
 
 ## 5. How to Install
+
 To install and run the **5tasy** web app, please follow the steps below:
 
 1. Ensure that Docker is installed on your system. You can download and install Docker from the official website: [Docker Engine for Ubuntu](https://docs.docker.com/engine/install/ubuntu/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/).
@@ -78,6 +70,7 @@ To install and run the **5tasy** web app, please follow the steps below:
    ```shell
    cd translation_layoutrecovery
    ```
+
    **Important:** Then, put the necessary environment files (.env) in this folder.
 
 4. Build the Docker image and run the container using the following command:
@@ -95,6 +88,7 @@ To install and run the **5tasy** web app, please follow the steps below:
    ```
 
 ## 6. Usage
+
 To use the web app, follow the steps below:
 
 1. Open your web browser and navigate to [http://localhost:3000](http://localhost:3000).
@@ -119,6 +113,7 @@ To use the web app, follow the steps below:
    <img src="assets/gifs/searchfile.gif">
 
 ## 7. References
+
 - **MaskRCNN** - phamquiluan - [PubLayNet](https://github.com/phamquiluan/PubLayNet)
 - **EasyOCR** - JadedAI - [jaded.ai](https://www.jaided.ai/easyocr/)
 - **envit5-translation** - Chinh Ngo, Trieu H. Trinh, Long Phan, Hieu Tran, Tai Dang, Hieu Nguyen, Minh Nguyen, Minh-Thang Luong - [huggingface.co](https://huggingface.co/VietAI/envit5-translation).
@@ -136,6 +131,3 @@ Contributions are what make GitHub such an amazing place to be learn, inspire, a
 3. Commit your changes: `git commit -m 'add your messages'`
 4. Push to the branch: `git push origin contribute/Contribute`
 5. Open a pull request
-
-## Star History Chart
-[![Star History Chart](https://api.star-history.com/svg?repos=phkhanhtrinh23/translation_layoutrecovery&type=Date)](https://star-history.com/#phkhanhtrinh23/translation_layoutrecovery&Date)
