@@ -29,6 +29,10 @@ Phá triển  TableEngine của PaddleOCR để khôi phục bố cục và hỗ
 <div align="center">
     <img src="assets\compare_result.png" width="800">
 </div>
+- Image: RecoveryLayout + Translate
+<div align="center">
+    <img src="assets/layout_trans.png" width="800">
+</div>
 
 # Installization 
 - Clone  this project:
