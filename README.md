@@ -8,8 +8,6 @@ Phá triển  TableEngine của PaddleOCR để khôi phục bố cục và hỗ
 
  🌎 English / [Vietnamese](README_vn.md) 
 
-<img src="assets/vietnamese_ocr.png" width=700>
-
 </div>
 <br>
 

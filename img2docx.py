@@ -9,7 +9,7 @@ from Recovery.recovery_to_doc import sorted_layout_boxes, convert_info_docx
 table_engine = PPStructure(recovery=True, lang='en')
 
 save_folder = './detail_img'
-img_path = 'inputs/imgs/test2.png'
+img_path = './inputs/imgs/check2.png'
 img = cv2.imread(img_path)
 result = table_engine(img)
 save_structure_res(result, save_folder, os.path.basename(img_path).split('.')[0])

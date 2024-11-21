@@ -15,6 +15,7 @@
 import os
 from copy import deepcopy
 import cv2
+import re
 from docx import Document
 from docx import shared
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -22,13 +23,48 @@ from docx.enum.section import WD_SECTION
 from docx.oxml.ns import qn
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.shared import Inches
-
 from Recovery.table_process import HtmlToDocx
-
+from tqdm import tqdm
 from utils.logging import get_logger
 
 logger = get_logger()
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+
+model_name = "VietAI/envit5-translation"
+tokenizer = AutoTokenizer.from_pretrained(model_name)  
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+def translate_to_vietnamese(text):
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+    outputs = model.generate(inputs.input_ids.to('cpu'), 
+                             max_length=512)
+                            #  num_beams=1, 
+                            #  no_repeat_ngram_size=2,
+                            #  repetition_penalty=2.0,  # Phạt điểm nếu từ/cụm từ lặp lại
+                            #  temperature=1.0)  # Dùng thêm num_beams và no_repeat_ngram_size để giảm lặp lại)
+    translated_text = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+    return translated_text[0].replace("vi: ", "")  # remove "vi:"" prefix
+def merge_lines_to_sentences(lines):
+    merged_sentences = []
+    current_sentence = ""
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # add current line with temp sentence
+        current_sentence += " " + line
+
+        if line.endswith((".", ";", "!", "?")):
+            merged_sentences.append(current_sentence.strip())
+            current_sentence = ""
+
+    if current_sentence:
+        merged_sentences.append(current_sentence.strip())
+
+    return merged_sentences
 
 def convert_info_docx(img, res, save_folder, img_name):
     doc = Document()
@@ -37,7 +73,7 @@ def convert_info_docx(img, res, save_folder, img_name):
     doc.styles["Normal"].font.size = shared.Pt(12)
 
     flag = 1
-    for i, region in enumerate(res):
+    for i, region in enumerate(tqdm(res, desc="Converting regions to docx")):
         # if len(region["res"]) == 0:
         #     continue
         img_idx = region["img_idx"]
@@ -50,44 +86,32 @@ def convert_info_docx(img, res, save_folder, img_name):
             section._sectPr.xpath("./w:cols")[0].set(qn("w:num"), "2")
             flag = 2
 
-        # if region["type"].lower() == "figure":
-        #     excel_save_folder = os.path.join(save_folder, img_name)
-        #     img_path = os.path.join(
-        #         excel_save_folder, "{}_{}.jpg".format(region["bbox"], img_idx)
-        #     )
-        #     paragraph_pic = doc.add_paragraph()
-        #     paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        #     run = paragraph_pic.add_run("")
-        #     if flag == 1:
-        #         run.add_picture(img_path, width=shared.Inches(5))
-        #     elif flag == 2:
-        #         run.add_picture(img_path, width=shared.Inches(2))
         if str(region.get("type", "")).lower() == "figure":
             excel_save_folder = os.path.join(save_folder, img_name)
             if not os.path.exists(excel_save_folder):
                 os.makedirs(excel_save_folder)
 
-            # Tạo đường dẫn ảnh
+            # create input path
             bbox = region.get("bbox", "default_bbox")
             img_idx = region.get("img_idx", "default_idx")
             img_path = os.path.join(
                 excel_save_folder, "{}_{}.jpg".format(bbox, img_idx)
             )
 
-            # Kiểm tra file ảnh
+            # check input path
             if not os.path.exists(img_path):
                 print("\n")
-                print(f"Ảnh không tồn tại: {img_path}")
+                print(f"The image doesn't exits: {img_path}")
                 continue
 
-            # Kiểm tra kích thước ảnh
+            # check size image
             img = cv2.imread(img_path)
             if img is None or img.shape[0] < 10 or img.shape[1] < 10:
                 print("\n")
-                print(f"Ảnh quá nhỏ hoặc không tồn tại: {img_path}")
+                print(f"Image's too small or not exits: {img_path}")
                 continue
 
-            # Thêm ảnh vào Word
+            # add to word
             if os.path.exists(img_path):
                 paragraph_pic = doc.add_paragraph()
                 paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -97,7 +121,7 @@ def convert_info_docx(img, res, save_folder, img_name):
                 elif flag == 2:
                     run.add_picture(img_path, width=Inches(2.6))
             else:
-                print(f"Ảnh không tồn tại tại đường dẫn: {img_path}")
+                print(f"Image does not exist at path: {img_path}")
 
         
         elif region["type"].lower() == "title":
@@ -106,15 +130,68 @@ def convert_info_docx(img, res, save_folder, img_name):
             parser = HtmlToDocx()
             parser.table_style = "TableGrid"
             parser.handle_table(region["res"]["html"], doc)
-        elif region["type"] == "equation" and "latex" in region["res"]: # fix nốt với các công thức
+        elif region["type"] == "equation" or "latex" in region["res"]: # fix nốt với các công thức
             pass
         else:
             paragraph = doc.add_paragraph()
             paragraph_format = paragraph.paragraph_format
+            # # for i, line in enumerate(region["res"]):
+            # #     if i == 0:
+            # #         paragraph_format.first_line_indent = shared.Inches(0.25)
+            # #     # original text : en
+            # #     # text_run = paragraph.add_run(line["text"] + " ")
+            # #     # text_run.font.size = shared.Pt(12)
+                
+            # #     # translate text
+            # #     vietnamese_text = translate_to_vietnamese(line["text"])
+            # #     text_run = paragraph.add_run(vietnamese_text + " ")
+            # #     text_run.font.size = shared.Pt(12)
+            # seen_texts = set()  # Set để theo dõi các văn bản đã dịch
+
+            current_sentence = ""  
+            seen_texts = set()  # make sure translated text is unique
+
             for i, line in enumerate(region["res"]):
-                if i == 0:
-                    paragraph_format.first_line_indent = shared.Inches(0.25)
-                text_run = paragraph.add_run(line["text"] + " ")
+                original_text = line["text"].strip()
+
+                if original_text in seen_texts:
+                    continue
+
+                seen_texts.add(original_text)  # text prossed
+
+                # Line matching
+                if current_sentence:
+                    current_sentence += " " + original_text
+                else:
+                    current_sentence = original_text
+
+                # check before Line matching
+                if original_text.endswith((".", "?", "!")):
+                    if i + 1 < len(region["res"]):  
+                        next_text = region["res"][i + 1]["text"].strip()
+                        # next line: a lowercase letter -->  incomplete
+                        if next_text and next_text[0].islower():
+                            continue
+
+                    # matching --> translate and add to docx
+                    vietnamese_text = translate_to_vietnamese(current_sentence.strip())
+                    print("\nOriginal:", current_sentence.strip())
+                    print("\nTranslated:", vietnamese_text)
+                    print("------------------------------------")
+
+                    text_run = paragraph.add_run(vietnamese_text + " ")
+                    text_run.font.size = shared.Pt(12)
+
+                    # Reset temporary sentence
+                    current_sentence = ""
+
+            if current_sentence.strip():
+                vietnamese_text = translate_to_vietnamese(current_sentence.strip())
+                print("\nOriginal (Remaining):", current_sentence.strip())
+                print("\nTranslated (Remaining):", vietnamese_text)
+                print("------------------------------------")
+
+                text_run = paragraph.add_run(vietnamese_text + " ")
                 text_run.font.size = shared.Pt(12)
 
     # save to docx
