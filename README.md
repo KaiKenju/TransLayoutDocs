@@ -26,10 +26,13 @@ Phá triển  TableEngine của PaddleOCR để khôi phục bố cục và hỗ
 - Python > 3.6
 
 # Introduction
+
 <div align="center">
     <img src="assets\compare_result.png" width="800">
 </div>
+
 - Image: RecoveryLayout + Translate
+ 
 <div align="center">
     <img src="assets/layout_trans.png" width="800">
 </div>
