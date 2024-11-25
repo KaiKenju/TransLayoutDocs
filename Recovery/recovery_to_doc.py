@@ -36,15 +36,19 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 def translate_to_vietnamese(text):
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
-    outputs = model.generate(inputs.input_ids.to('cpu'), 
-                             max_length=512)
-                            #  num_beams=1, 
-                            #  no_repeat_ngram_size=2,
-                            #  repetition_penalty=2.0,  # Phạt điểm nếu từ/cụm từ lặp lại
-                            #  temperature=1.0)  # Dùng thêm num_beams và no_repeat_ngram_size để giảm lặp lại)
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=1024)  # Tăng max_length
+    outputs = model.generate(
+        inputs.input_ids.to('cpu'),
+        max_length=512,  
+        num_beams=4,  
+        no_repeat_ngram_size=2,
+        repetition_penalty=1.5,  # Penalty points if word/phrase is repeated
+        temperature=0.7,  # reduce randomness 
+    )
     translated_text = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-    return translated_text[0].replace("vi: ", "")  # remove "vi:"" prefix
+    return translated_text[0].replace("vi: ", "")
+
+
 def merge_lines_to_sentences(lines):
     merged_sentences = []
     current_sentence = ""
@@ -147,7 +151,7 @@ def convert_info_docx(img, res, save_folder, img_name):
             # #     text_run = paragraph.add_run(vietnamese_text + " ")
             # #     text_run.font.size = shared.Pt(12)
             # seen_texts = set()  # Set để theo dõi các văn bản đã dịch
-
+            #---------
             current_sentence = ""  
             seen_texts = set()  # make sure translated text is unique
 
@@ -166,7 +170,7 @@ def convert_info_docx(img, res, save_folder, img_name):
                     current_sentence = original_text
 
                 # check before Line matching
-                if original_text.endswith((".", "?", "!")):
+                if original_text.endswith((".", "?", "!", ";")):
                     if i + 1 < len(region["res"]):  
                         next_text = region["res"][i + 1]["text"].strip()
                         # next line: a lowercase letter -->  incomplete
@@ -193,7 +197,7 @@ def convert_info_docx(img, res, save_folder, img_name):
 
                 text_run = paragraph.add_run(vietnamese_text + " ")
                 text_run.font.size = shared.Pt(12)
-
+            
     # save to docx
     docx_path = os.path.join(save_folder, "{}_ocr.docx".format(img_name))
     doc.save(docx_path)

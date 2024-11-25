@@ -64,4 +64,10 @@ pip install -r requirements.txt
 python main.py
 ```
 
+- Image to Word
+```[bash]
+python a.py --input=./inputs/imgs/check2.png --output=./detail_img --lang=vi
+```
+- Note: Following the step if you translate in KR,JP,CH : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
+
 Still update
