@@ -28,7 +28,7 @@ from tqdm import tqdm
 from utils.logging import get_logger
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, MBartForConditionalGeneration, MBart50TokenizerFast
 from transformers import pipeline
-
+from pychecker import correct_title
 logger = get_logger()
 
 models = {
@@ -178,7 +178,9 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
 
         
         elif region["type"].lower() == "title":
-            doc.add_heading(region["res"][0]["text"])
+            original_title = region["res"][0]["text"]
+            corrected_title = correct_title(original_title)
+            doc.add_heading(corrected_title)
         elif region["type"].lower() == "table":
             parser = HtmlToDocx()
             parser.table_style = "TableGrid"
@@ -202,47 +204,11 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
             # seen_texts = set()  # Set để theo dõi các văn bản đã dịch
             #---------
             seen_texts = set()
+            complete_paragraph = ""
             current_sentence = ""
-           
-            # for i, line in enumerate(region["res"]):
-            #     if i == 0:
-            #         paragraph_format.first_line_indent = shared.Inches(0.25)
-            #     original_text = line["text"].strip()
-            #     print(f"OCR Output: {original_text}")
-            #     corrected_text = spell_checker(original_text)[0]['generated_text']
-            #     print(f"Spell Correction: {corrected_text}")
-
-            #     if original_text in seen_texts:
-            #         continue
-            #     seen_texts.add(original_text)
-
-            #     if current_sentence and not current_sentence.endswith(" "):
-            #         current_sentence += " "
-                
-            #     # Thêm văn bản hiện tại
-            #     current_sentence += original_text
-            #     if original_text.endswith((".", "!", "?")):
-            #         # corrected_text = spell_checker(original_text)[0]['generated_text']
-        
-            #         translated_text = translate(current_sentence.strip(), lang=lang)
-            #         print("\nOriginal:", current_sentence.strip())
-            #         print("\nTranslated:", translated_text)
-            #         print("------------------------------------")
-            #         text_run = paragraph.add_run(translated_text + " ")
-            #         text_run.font.size = shared.Pt(12)
-            #         current_sentence = ""
-
-            # if current_sentence.strip():
-            #     # corrected_text = spell_checker(current_sentence)[0]['generated_text']
-        
-            #     translated_text = translate(current_sentence.strip(), lang=lang)
-            #     # print("\nOriginal(Remaining):", current_sentence.strip())
-            #     print("\nTranslated(Remaining):", translated_text)
-            #     print("------------------------------------")
-            #     text_run = paragraph.add_run(translated_text + " ")
-            #     text_run.font.size = shared.Pt(12)
             for i, line in enumerate(region["res"]):
                 if i == 0:
+                    # doc.add_paragraph("") 
                     paragraph_format.first_line_indent = shared.Inches(0.25)
                 original_text = line["text"].strip()
                 # print(f"OCR Output: {original_text}")
@@ -257,28 +223,38 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
                     current_sentence += " "
                 
                 # Thêm văn bản hiện tại
-                current_sentence += corrected_text
+                current_sentence +=  corrected_text
                 if corrected_text.endswith((".", "!", "?")):
                     # corrected_text = spell_checker(original_text)[0]['generated_text']
-        
+                    
                     translated_text = translate(current_sentence.strip(), lang=lang)
                     print("\nOriginal:", current_sentence.strip())
                     print("\nTranslated:", translated_text)
                     print("------------------------------------")
+                    complete_paragraph += current_sentence + " "
                     text_run = paragraph.add_run(translated_text + " ")
                     text_run.font.size = shared.Pt(12)
+                    
+                
                     current_sentence = ""
 
             if current_sentence.strip():
                 # corrected_text = spell_checker(current_sentence)[0]['generated_text']
-        
+                
                 translated_text = translate(current_sentence.strip(), lang=lang)
                 # print("\nOriginal(Remaining):", current_sentence.strip())
                 print("\nTranslated(Remaining):", translated_text)
                 print("------------------------------------")
+                complete_paragraph += current_sentence + " "
                 text_run = paragraph.add_run(translated_text + " ")
                 text_run.font.size = shared.Pt(12)
-            
+
+                
+            # print all text in 1 phrase
+            if complete_paragraph.strip():
+                print("\nComplete Paragraph:")
+                print(complete_paragraph)
+
     # save to docx
     docx_path = os.path.join(save_folder, "{}_ocr.docx".format(img_name))
     doc.save(docx_path)
