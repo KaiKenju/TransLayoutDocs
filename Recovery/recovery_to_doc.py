@@ -27,6 +27,7 @@ from Recovery.table_process import HtmlToDocx
 from tqdm import tqdm
 from utils.logging import get_logger
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, MBartForConditionalGeneration, MBart50TokenizerFast
+from transformers import pipeline
 
 logger = get_logger()
 
@@ -46,6 +47,7 @@ models = {
         "target_lang": "ja_XX",
     }
 }
+spell_checker = pipeline("text2text-generation", model="oliverguhr/spelling-correction-english-base")
 
 # Load tất cả mô hình và tokenizer trước
 for lang, config in models.items():
@@ -199,68 +201,66 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
             # #     text_run.font.size = shared.Pt(12)
             # seen_texts = set()  # Set để theo dõi các văn bản đã dịch
             #---------
-            # current_sentence = ""  
-            # seen_texts = set()  # make sure translated text is unique
-
-            # for i, line in enumerate(region["res"]):
-            #     original_text = line["text"].strip()
-
-            #     if original_text in seen_texts:
-            #         continue
-
-            #     seen_texts.add(original_text)  # text prossed
-
-            #     # Line matching
-            #     if current_sentence:
-            #         current_sentence += " " + original_text
-            #     else:
-            #         current_sentence = original_text
-
-            #     # check before Line matching
-            #     if original_text.endswith((".", "?", "!", ";")):
-            #         if i + 1 < len(region["res"]):  
-            #             next_text = region["res"][i + 1]["text"].strip()
-            #             # next line: a lowercase letter -->  incomplete
-            #             if next_text and next_text[0].islower():
-            #                 continue
-
-            #         # matching --> translate and add to docx
-            #         vietnamese_text = translate_to_vietnamese(current_sentence.strip())
-            #         print("\nOriginal:", current_sentence.strip())
-            #         print("\nTranslated:", vietnamese_text)
-            #         print("------------------------------------")
-
-            #         text_run = paragraph.add_run(vietnamese_text + " ")
-            #         text_run.font.size = shared.Pt(12)
-
-            #         # Reset temporary sentence
-            #         current_sentence = ""
-
-            # if current_sentence.strip():
-            #     vietnamese_text = translate_to_vietnamese(current_sentence.strip())
-            #     print("\nOriginal (Remaining):", current_sentence.strip())
-            #     print("\nTranslated (Remaining):", vietnamese_text)
-            #     print("------------------------------------")
-
-            #     text_run = paragraph.add_run(vietnamese_text + " ")
-            #     text_run.font.size = shared.Pt(12)
             seen_texts = set()
             current_sentence = ""
            
-            for line in region["res"]:
-                original_text = line["text"].strip()
-                print(f"OCR Output: {original_text}")
+            # for i, line in enumerate(region["res"]):
+            #     if i == 0:
+            #         paragraph_format.first_line_indent = shared.Inches(0.25)
+            #     original_text = line["text"].strip()
+            #     print(f"OCR Output: {original_text}")
+            #     corrected_text = spell_checker(original_text)[0]['generated_text']
+            #     print(f"Spell Correction: {corrected_text}")
 
-                if original_text in seen_texts:
+            #     if original_text in seen_texts:
+            #         continue
+            #     seen_texts.add(original_text)
+
+            #     if current_sentence and not current_sentence.endswith(" "):
+            #         current_sentence += " "
+                
+            #     # Thêm văn bản hiện tại
+            #     current_sentence += original_text
+            #     if original_text.endswith((".", "!", "?")):
+            #         # corrected_text = spell_checker(original_text)[0]['generated_text']
+        
+            #         translated_text = translate(current_sentence.strip(), lang=lang)
+            #         print("\nOriginal:", current_sentence.strip())
+            #         print("\nTranslated:", translated_text)
+            #         print("------------------------------------")
+            #         text_run = paragraph.add_run(translated_text + " ")
+            #         text_run.font.size = shared.Pt(12)
+            #         current_sentence = ""
+
+            # if current_sentence.strip():
+            #     # corrected_text = spell_checker(current_sentence)[0]['generated_text']
+        
+            #     translated_text = translate(current_sentence.strip(), lang=lang)
+            #     # print("\nOriginal(Remaining):", current_sentence.strip())
+            #     print("\nTranslated(Remaining):", translated_text)
+            #     print("------------------------------------")
+            #     text_run = paragraph.add_run(translated_text + " ")
+            #     text_run.font.size = shared.Pt(12)
+            for i, line in enumerate(region["res"]):
+                if i == 0:
+                    paragraph_format.first_line_indent = shared.Inches(0.25)
+                original_text = line["text"].strip()
+                # print(f"OCR Output: {original_text}")
+                corrected_text = spell_checker(original_text)[0]['generated_text']
+                # print(f"Spell Correction: {corrected_text}")
+
+                if corrected_text in seen_texts:
                     continue
-                seen_texts.add(original_text)
+                seen_texts.add(corrected_text)
 
                 if current_sentence and not current_sentence.endswith(" "):
                     current_sentence += " "
                 
                 # Thêm văn bản hiện tại
-                current_sentence += original_text
-                if original_text.endswith((".", "!", "?")):
+                current_sentence += corrected_text
+                if corrected_text.endswith((".", "!", "?")):
+                    # corrected_text = spell_checker(original_text)[0]['generated_text']
+        
                     translated_text = translate(current_sentence.strip(), lang=lang)
                     print("\nOriginal:", current_sentence.strip())
                     print("\nTranslated:", translated_text)
@@ -270,8 +270,10 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
                     current_sentence = ""
 
             if current_sentence.strip():
+                # corrected_text = spell_checker(current_sentence)[0]['generated_text']
+        
                 translated_text = translate(current_sentence.strip(), lang=lang)
-                print("\nOriginal(Remaining):", current_sentence.strip())
+                # print("\nOriginal(Remaining):", current_sentence.strip())
                 print("\nTranslated(Remaining):", translated_text)
                 print("------------------------------------")
                 text_run = paragraph.add_run(translated_text + " ")
