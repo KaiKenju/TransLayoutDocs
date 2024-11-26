@@ -26,27 +26,74 @@ from docx.shared import Inches
 from Recovery.table_process import HtmlToDocx
 from tqdm import tqdm
 from utils.logging import get_logger
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, MBartForConditionalGeneration, MBart50TokenizerFast
 
 logger = get_logger()
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+models = {
+    "vi": {
+        "model_name": "VietAI/envit5-translation",
+        "tokenizer": AutoTokenizer.from_pretrained("VietAI/envit5-translation"),
+        "model": AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation"),
+        "use_lang_codes": False,  # Không sử dụng src_lang/target_lang
+    },
+    "jp": {
+        "model_name": "facebook/mbart-large-50-many-to-many-mmt",
+        "tokenizer": MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt"),
+        "model": MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt"),
+        "use_lang_codes": True,  # Có sử dụng src_lang/target_lang
+        "src_lang": "en_XX",
+        "target_lang": "ja_XX",
+    }
+}
 
-model_name = "VietAI/envit5-translation"
-tokenizer = AutoTokenizer.from_pretrained(model_name)  
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+# Load tất cả mô hình và tokenizer trước
+for lang, config in models.items():
+    if config["use_lang_codes"]:
+        config["tokenizer"] = MBart50TokenizerFast.from_pretrained(config["model_name"])
+        config["model"] = MBartForConditionalGeneration.from_pretrained(config["model_name"])
+    else:
+        config["tokenizer"] = AutoTokenizer.from_pretrained(config["model_name"])
+        config["model"] = AutoModelForSeq2SeqLM.from_pretrained(config["model_name"])
 
-def translate_to_vietnamese(text):
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=1024)  # Tăng max_length
-    outputs = model.generate(
-        inputs.input_ids.to('cpu'),
-        max_length=512,  
-        num_beams=4,  
-        no_repeat_ngram_size=2,
-        repetition_penalty=1.5,  # Penalty points if word/phrase is repeated
-        temperature=0.7,  # reduce randomness 
-    )
+def translate(text, lang):
+    """
+    Hàm dịch văn bản dựa trên ngôn ngữ và mô hình đã được cấu hình.
+    :param text: Văn bản cần dịch.
+    :param lang: Mã ngôn ngữ ('vi' hoặc 'jp').
+    :return: Văn bản đã dịch.
+    """
+    if lang not in models:
+        raise ValueError(f"Unsupported language: {lang}")
+    
+    # Lấy cấu hình mô hình
+    config = models[lang]
+    tokenizer = config["tokenizer"]
+    model = config["model"]
+
+    # Xử lý cho mô hình có src_lang/target_lang
+    if config["use_lang_codes"]:
+        tokenizer.src_lang = config["src_lang"]  # Thiết lập ngôn ngữ nguồn
+        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+        outputs = model.generate(
+            **inputs,
+            forced_bos_token_id=tokenizer.lang_code_to_id[config["target_lang"]],
+        )
+    else:
+        # Xử lý cho mô hình không dùng src_lang/target_lang (VietAI)
+        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        outputs = model.generate(
+            inputs.input_ids.to('cpu'),
+            max_length=512,
+            num_beams=4,
+            no_repeat_ngram_size=2,
+            repetition_penalty=1.5,
+            temperature=0.7,
+        )
+    
+    # Giải mã kết quả dịch
     translated_text = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-    return translated_text[0].replace("vi: ", "")
+    return translated_text[0].replace("vi: ", "").replace("vi", "")
 
 
 def merge_lines_to_sentences(lines):
@@ -70,7 +117,7 @@ def merge_lines_to_sentences(lines):
 
     return merged_sentences
 
-def convert_info_docx(img, res, save_folder, img_name):
+def convert_info_docx(img, res, save_folder, img_name,lang):
     doc = Document()
     doc.styles["Normal"].font.name = "Times New Roman"
     doc.styles["Normal"]._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
@@ -152,50 +199,82 @@ def convert_info_docx(img, res, save_folder, img_name):
             # #     text_run.font.size = shared.Pt(12)
             # seen_texts = set()  # Set để theo dõi các văn bản đã dịch
             #---------
-            current_sentence = ""  
-            seen_texts = set()  # make sure translated text is unique
+            # current_sentence = ""  
+            # seen_texts = set()  # make sure translated text is unique
 
-            for i, line in enumerate(region["res"]):
+            # for i, line in enumerate(region["res"]):
+            #     original_text = line["text"].strip()
+
+            #     if original_text in seen_texts:
+            #         continue
+
+            #     seen_texts.add(original_text)  # text prossed
+
+            #     # Line matching
+            #     if current_sentence:
+            #         current_sentence += " " + original_text
+            #     else:
+            #         current_sentence = original_text
+
+            #     # check before Line matching
+            #     if original_text.endswith((".", "?", "!", ";")):
+            #         if i + 1 < len(region["res"]):  
+            #             next_text = region["res"][i + 1]["text"].strip()
+            #             # next line: a lowercase letter -->  incomplete
+            #             if next_text and next_text[0].islower():
+            #                 continue
+
+            #         # matching --> translate and add to docx
+            #         vietnamese_text = translate_to_vietnamese(current_sentence.strip())
+            #         print("\nOriginal:", current_sentence.strip())
+            #         print("\nTranslated:", vietnamese_text)
+            #         print("------------------------------------")
+
+            #         text_run = paragraph.add_run(vietnamese_text + " ")
+            #         text_run.font.size = shared.Pt(12)
+
+            #         # Reset temporary sentence
+            #         current_sentence = ""
+
+            # if current_sentence.strip():
+            #     vietnamese_text = translate_to_vietnamese(current_sentence.strip())
+            #     print("\nOriginal (Remaining):", current_sentence.strip())
+            #     print("\nTranslated (Remaining):", vietnamese_text)
+            #     print("------------------------------------")
+
+            #     text_run = paragraph.add_run(vietnamese_text + " ")
+            #     text_run.font.size = shared.Pt(12)
+            seen_texts = set()
+            current_sentence = ""
+           
+            for line in region["res"]:
                 original_text = line["text"].strip()
+                print(f"OCR Output: {original_text}")
 
                 if original_text in seen_texts:
                     continue
+                seen_texts.add(original_text)
 
-                seen_texts.add(original_text)  # text prossed
-
-                # Line matching
-                if current_sentence:
-                    current_sentence += " " + original_text
-                else:
-                    current_sentence = original_text
-
-                # check before Line matching
-                if original_text.endswith((".", "?", "!", ";")):
-                    if i + 1 < len(region["res"]):  
-                        next_text = region["res"][i + 1]["text"].strip()
-                        # next line: a lowercase letter -->  incomplete
-                        if next_text and next_text[0].islower():
-                            continue
-
-                    # matching --> translate and add to docx
-                    vietnamese_text = translate_to_vietnamese(current_sentence.strip())
+                if current_sentence and not current_sentence.endswith(" "):
+                    current_sentence += " "
+                
+                # Thêm văn bản hiện tại
+                current_sentence += original_text
+                if original_text.endswith((".", "!", "?")):
+                    translated_text = translate(current_sentence.strip(), lang=lang)
                     print("\nOriginal:", current_sentence.strip())
-                    print("\nTranslated:", vietnamese_text)
+                    print("\nTranslated:", translated_text)
                     print("------------------------------------")
-
-                    text_run = paragraph.add_run(vietnamese_text + " ")
+                    text_run = paragraph.add_run(translated_text + " ")
                     text_run.font.size = shared.Pt(12)
-
-                    # Reset temporary sentence
                     current_sentence = ""
 
             if current_sentence.strip():
-                vietnamese_text = translate_to_vietnamese(current_sentence.strip())
-                print("\nOriginal (Remaining):", current_sentence.strip())
-                print("\nTranslated (Remaining):", vietnamese_text)
+                translated_text = translate(current_sentence.strip(), lang=lang)
+                print("\nOriginal(Remaining):", current_sentence.strip())
+                print("\nTranslated(Remaining):", translated_text)
                 print("------------------------------------")
-
-                text_run = paragraph.add_run(vietnamese_text + " ")
+                text_run = paragraph.add_run(translated_text + " ")
                 text_run.font.size = shared.Pt(12)
             
     # save to docx
@@ -273,3 +352,5 @@ def sorted_layout_boxes(res, w):
     if res_right:
         new_res += res_right
     return new_res
+
+

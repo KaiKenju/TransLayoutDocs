@@ -1,5 +1,5 @@
 # TransLayoutDocs
-Phá triển  TableEngine của PaddleOCR để khôi phục bố cục và hỗ trợ dịch thuật tài liệu
+Phát triển  TableEngine của PaddleOCR để khôi phục bố cục và hỗ trợ dịch thuật tài liệu
 
 <div align="center">
 <!-- width=120 height=120 -->
@@ -71,3 +71,5 @@ python a.py --input=./inputs/imgs/check2.png --output=./detail_img --lang=vi
 - Note: Following the step if you translate in KR,JP,CH : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
 
 Still update
+fix spell_correction eng and vi
+just translate 3/4 phrase
