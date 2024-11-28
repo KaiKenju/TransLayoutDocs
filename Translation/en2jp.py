@@ -1,26 +1,3 @@
-# # Multiple languages translation using MBart model
-# from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
-
-# # Load model và tokenizer
-# model_name = "facebook/mbart-large-50-many-to-many-mmt"
-# tokenizer = MBart50TokenizerFast.from_pretrained(model_name)
-# model = MBartForConditionalGeneration.from_pretrained(model_name)
-
-# # Chỉ định ngôn ngữ
-# tokenizer.src_lang = "en_XX"
-# target_lang = "ja_XX"
-
-# # Văn bản cần dịch
-# text = "Low-carbohydrate diets have become increasingly popular."
-
-# # Tokenize và dịch
-# inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
-# translated = model.generate(**inputs, forced_bos_token_id=tokenizer.lang_code_to_id[target_lang])
-
-# # Decode kết quả
-# output = tokenizer.decode(translated[0], skip_special_tokens=True)
-# print("Dịch sang tiếng Nhật:", output)
-
 
 from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
 
@@ -58,5 +35,5 @@ def translate_to_language(text, src_lang="en_XX", target_lang="ja_XX"):
 # Example
 # text = "Low-carbohydrate diets have become increasingly popular."
 # translated_text = translate_to_language(text, src_lang="en_XX", target_lang="ja_XX")
-# print("Dịch sang tiếng Nhật:", translated_text)
+# print("Translate to JP:", translated_text)
 

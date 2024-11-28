@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Update by KaiKenju (hiepdv.tb288@gmail.com)
 import os
 from copy import deepcopy
 import cv2
@@ -29,17 +30,11 @@ from utils.logging import get_logger
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, MBartForConditionalGeneration, MBart50TokenizerFast
 from transformers import pipeline
 from Translation.pychecker import correct_title
-logger = get_logger()
+from SpellCorrection.correct_spell import spell_checker
+from SpellCorrection.correct_spell_vi import correct_spelling
 from Model.model import models, AutoModelForSeq2SeqLM
+logger = get_logger()
 
-# # Load all model and tokenizer before
-# for lang, config in models.items():
-#     if config["use_lang_codes"]:
-#         config["tokenizer"] = MBart50TokenizerFast.from_pretrained(config["model_name"])
-#         config["model"] = MBartForConditionalGeneration.from_pretrained(config["model_name"])
-#     else:
-#         config["tokenizer"] = AutoTokenizer.from_pretrained(config["model_name"])
-#         config["model"] = AutoModelForSeq2SeqLM.from_pretrained(config["model_name"])
 def load_model_and_tokenizer(lang):
     """
     Hàm tải model và tokenizer cho ngôn ngữ được yêu cầu nếu chưa được tải.
@@ -58,7 +53,7 @@ def load_model_and_tokenizer(lang):
             config["tokenizer"] = AutoTokenizer.from_pretrained(config["model_name"])
             config["model"] = AutoModelForSeq2SeqLM.from_pretrained(config["model_name"])
 
-def translate(text, lang):
+def translate(text, lang, device='cpu'):
     """
     Hàm dịch văn bản dựa trên ngôn ngữ và mô hình đã được cấu hình.
     :param text: Văn bản cần dịch.
@@ -77,16 +72,16 @@ def translate(text, lang):
     # Xử lý cho mô hình có src_lang/target_lang
     if config["use_lang_codes"]:
         tokenizer.src_lang = config["src_lang"]  # Thiết lập ngôn ngữ nguồn
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(device)
         outputs = model.generate(
             **inputs,
             forced_bos_token_id=tokenizer.lang_code_to_id[config["target_lang"]],
         )
     else:
         # Xử lý cho mô hình không dùng src_lang/target_lang (VietAI)
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512).to(device)
         outputs = model.generate(
-            inputs.input_ids.to('cpu'),
+            inputs.input_ids,
             max_length=512,
             num_beams=4,
             no_repeat_ngram_size=2,
@@ -120,7 +115,7 @@ def merge_lines_to_sentences(lines):
 
     return merged_sentences
 
-def convert_info_docx(img, res, save_folder, img_name,lang):
+def convert_info_docx(img, res, save_folder, img_name,lang, device='cpu'):
     doc = Document()
     doc.styles["Normal"].font.name = "Times New Roman"
     doc.styles["Normal"]._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
@@ -181,7 +176,7 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
         elif region["type"].lower() == "title":
             original_title = region["res"][0]["text"]
             corrected_title = correct_title(original_title)
-            translated_title = translate(corrected_title, lang=lang)
+            translated_title = translate(corrected_title, lang=lang, device=device)
             doc.add_heading(translated_title)
         elif region["type"].lower() == "table":
             parser = HtmlToDocx()
@@ -203,7 +198,6 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
             # #     vietnamese_text = translate_to_vietnamese(line["text"])
             # #     text_run = paragraph.add_run(vietnamese_text + " ")
             # #     text_run.font.size = shared.Pt(12)
-            # seen_texts = set()  # Set để theo dõi các văn bản đã dịch
             #---------
             seen_texts = set()
             complete_paragraph = ""
@@ -228,12 +222,16 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
                 if corrected_text.endswith((".", "!", "?")):
                     # corrected_text = spell_checker(original_text)[0]['generated_text']
                     
-                    translated_text = translate(current_sentence.strip(), lang=lang)
+                    translated_text = translate(current_sentence.strip(), lang=lang,device=device)
+                    if lang=="vi":
+                         corrected_translated_text = correct_spelling(translated_text)
+                    else:
+                        print("KhÔNG Phải ngôn ngữ Vi nên ko check spell correction được")
                     print("\nOriginal:", current_sentence.strip())
-                    print("\nTranslated:", translated_text)
+                    print("\nTranslated&Correct:", corrected_translated_text)
                     print("------------------------------------")
                     complete_paragraph += current_sentence + " "
-                    text_run = paragraph.add_run(translated_text + " ")
+                    text_run = paragraph.add_run(corrected_translated_text + " ")
                     text_run.font.size = shared.Pt(12)
                     
                 
@@ -242,12 +240,16 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
             if current_sentence.strip():
                 # corrected_text = spell_checker(current_sentence)[0]['generated_text']
                 
-                translated_text = translate(current_sentence.strip(), lang=lang)
+                translated_text = translate(current_sentence.strip(), lang=lang,device=device)
+                if lang=="vi":
+                    corrected_translated_text = correct_spelling(translated_text)
+                else:
+                    print("KhÔNG Phải ngôn ngữ Vi nên ko check spell correction được")
                 # print("\nOriginal(Remaining):", current_sentence.strip())
-                print("\nTranslated(Remaining):", translated_text)
+                print("\nTranslated(Remaining):", corrected_translated_text)
                 print("------------------------------------")
                 complete_paragraph += current_sentence + " "
-                text_run = paragraph.add_run(translated_text + " ")
+                text_run = paragraph.add_run(corrected_translated_text + " ")
                 text_run.font.size = shared.Pt(12)
 
                 

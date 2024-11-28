@@ -6,7 +6,7 @@ Phát triển  TableEngine của PaddleOCR để khôi phục bố cục và h�
 <img alt="ocr_vietnamese" src="assets/logo_doc.png" > 
 <h1>TransLayoutDocs</h1>
 
- 🌎 English / [Vietnamese](README_vn.md) 
+ 🌎 English / [Vietnamese](README_vn.md) / [日本]
 
 </div>
 <br>
@@ -15,17 +15,35 @@ Phát triển  TableEngine của PaddleOCR để khôi phục bố cục và h�
 >
 > - [Recognition-table-with-table-transformer](https://github.com/KaiKenju/Recognition-Table-with-Table_Transformer-and-vietOCR): A system combining Table Transformer and vietOCR for accurate table structure and Vietnamese character recognition from images.
 >
-> - [Vietnamese_OCR_documents](https://github.com/KaiKenju/Vietnamese_OCR_documents): Converts text from images or scans into digital format, streamlining Vietnamese text processing and information management.
+> - [Vietnamese_OCR_documents](https://github.com/KaiKenju/Vietnamese_OCR_documents): Converts text from images or PDF scans into digital format, streamlining Vietnamese text processing and information management.
 <br>
 
 <br>
 
 # Table of Contents
 
-# Dependencies
-- Python > 3.6
+# Technical Overview
+- **Python** > 3.6
+- **Recovery Layout**: PPStructure (PaddleOCR)
+- **OCR**: PaddleOCR
+- **Translation** : 
+  - mbart-large-50-many-to-many-mmt(jp)
+  - envit5-translation(vi)
+- **Spell Corection**
+  - oliverguhr/spelling-correction-english-base(en)
+                
 
 # Introduction
+
+This diagram introduces the Layout Translation Extraction process we developed based on [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR/blob/main/README_en.md), from image correction to information reconstruction. You can read the docs [here](https://paddlepaddle.github.io/PaddleOCR/latest/en/ppstructure/overview.html#1-introduction) to see differences
+
+<div align="center">
+    <img src="./assets/translateOCR_img.png" width="800">
+</div>
+
+# Visualization
+
+- Image: RecoveryLayout 
 
 <div align="center">
     <img src="assets\compare_result.png" width="800">
@@ -66,9 +84,18 @@ python main.py
 
 - Image to Word
 ```[bash]
-python a.py --input=./inputs/imgs/check2.png --output=./detail_img --lang=vi
+python img2docx.py --input=./inputs/imgs/check2.png --output=./detail_img --lang=vi --device=cpu
 ```
-- Note: Following the step if you translate in KR,JP,CH : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
+
+```console
+Usage: python img2docx.py --input=./inputs/imgs/chap4.png --output=./detail_img --lang=vi --device=cpu
+
+  --input              Input img . Default: inputs
+  --output             Output folder. Default: detail_img
+  --device             cpu or cuda. Default: cpu
+```
+
+- Note: Following the step if you translate in KR,JP,CH to see in terminal : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
 
 Still update
 fix spell_correction eng and vi
