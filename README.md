@@ -39,7 +39,7 @@ Phát triển  TableEngine của PaddleOCR để khôi phục bố cục và h�
 This diagram introduces the Layout Translation Extraction process we developed based on [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR/blob/main/README_en.md), from image correction to information reconstruction. You can read the docs [here](https://paddlepaddle.github.io/PaddleOCR/latest/en/ppstructure/overview.html#1-introduction) to see differences
 
 <div align="center">
-    <img src="./assets/translateOCR_img.png" width="700">
+    <img src="./assets/translateOCR_img.png" width="800">
 </div>
 
 # Visualization
