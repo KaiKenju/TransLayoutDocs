@@ -28,35 +28,35 @@ from tqdm import tqdm
 from utils.logging import get_logger
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, MBartForConditionalGeneration, MBart50TokenizerFast
 from transformers import pipeline
-from pychecker import correct_title
+from Translation.pychecker import correct_title
 logger = get_logger()
+from Model.model import models, AutoModelForSeq2SeqLM
 
-models = {
-    "vi": {
-        "model_name": "VietAI/envit5-translation",
-        "tokenizer": AutoTokenizer.from_pretrained("VietAI/envit5-translation"),
-        "model": AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation"),
-        "use_lang_codes": False,  # Không sử dụng src_lang/target_lang
-    },
-    "jp": {
-        "model_name": "facebook/mbart-large-50-many-to-many-mmt",
-        "tokenizer": MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt"),
-        "model": MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt"),
-        "use_lang_codes": True,  # Có sử dụng src_lang/target_lang
-        "src_lang": "en_XX",
-        "target_lang": "ja_XX",
-    }
-}
-spell_checker = pipeline("text2text-generation", model="oliverguhr/spelling-correction-english-base")
+# # Load all model and tokenizer before
+# for lang, config in models.items():
+#     if config["use_lang_codes"]:
+#         config["tokenizer"] = MBart50TokenizerFast.from_pretrained(config["model_name"])
+#         config["model"] = MBartForConditionalGeneration.from_pretrained(config["model_name"])
+#     else:
+#         config["tokenizer"] = AutoTokenizer.from_pretrained(config["model_name"])
+#         config["model"] = AutoModelForSeq2SeqLM.from_pretrained(config["model_name"])
+def load_model_and_tokenizer(lang):
+    """
+    Hàm tải model và tokenizer cho ngôn ngữ được yêu cầu nếu chưa được tải.
+    :param lang: Mã ngôn ngữ ('vi', 'jp', ...)
+    """
+    if lang not in models:
+        raise ValueError(f"Ngôn ngữ không được hỗ trợ: {lang}")
 
-# Load tất cả mô hình và tokenizer trước
-for lang, config in models.items():
-    if config["use_lang_codes"]:
-        config["tokenizer"] = MBart50TokenizerFast.from_pretrained(config["model_name"])
-        config["model"] = MBartForConditionalGeneration.from_pretrained(config["model_name"])
-    else:
-        config["tokenizer"] = AutoTokenizer.from_pretrained(config["model_name"])
-        config["model"] = AutoModelForSeq2SeqLM.from_pretrained(config["model_name"])
+    config = models[lang]
+    if config["model"] is None or config["tokenizer"] is None:  # Chỉ tải nếu chưa có
+        print(f"Tải mô hình và tokenizer cho ngôn ngữ: {lang}")
+        if config["use_lang_codes"]:
+            config["tokenizer"] = MBart50TokenizerFast.from_pretrained(config["model_name"])
+            config["model"] = MBartForConditionalGeneration.from_pretrained(config["model_name"])
+        else:
+            config["tokenizer"] = AutoTokenizer.from_pretrained(config["model_name"])
+            config["model"] = AutoModelForSeq2SeqLM.from_pretrained(config["model_name"])
 
 def translate(text, lang):
     """
@@ -69,6 +69,7 @@ def translate(text, lang):
         raise ValueError(f"Unsupported language: {lang}")
     
     # Lấy cấu hình mô hình
+    load_model_and_tokenizer(lang)
     config = models[lang]
     tokenizer = config["tokenizer"]
     model = config["model"]
@@ -180,7 +181,8 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
         elif region["type"].lower() == "title":
             original_title = region["res"][0]["text"]
             corrected_title = correct_title(original_title)
-            doc.add_heading(corrected_title)
+            translated_title = translate(corrected_title, lang=lang)
+            doc.add_heading(translated_title)
         elif region["type"].lower() == "table":
             parser = HtmlToDocx()
             parser.table_style = "TableGrid"
@@ -208,7 +210,6 @@ def convert_info_docx(img, res, save_folder, img_name,lang):
             current_sentence = ""
             for i, line in enumerate(region["res"]):
                 if i == 0:
-                    # doc.add_paragraph("") 
                     paragraph_format.first_line_indent = shared.Inches(0.25)
                 original_text = line["text"].strip()
                 # print(f"OCR Output: {original_text}")
