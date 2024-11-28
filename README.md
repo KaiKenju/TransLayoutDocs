@@ -31,6 +31,7 @@ Phát triển  TableEngine của PaddleOCR để khôi phục bố cục và h�
   - envit5-translation(vi)
 - **Spell Corection**
   - oliverguhr/spelling-correction-english-base(en)
+  - bmd1905/vietnamese-correction(vi)
                 
 
 # Introduction
