@@ -6,7 +6,7 @@ Phát triển  TableEngine của PaddleOCR để khôi phục bố cục và h�
 <img alt="ocr_vietnamese" src="assets/logo_doc.png" > 
 <h1>TransLayoutDocs</h1>
 
- 🌎 English / [Vietnamese](README_vn.md) / [日本]
+ 🌎 English / [Vietnamese](README_vn.md) / [日本](README_jp.md)
 
 </div>
 <br>
@@ -99,5 +99,4 @@ Usage: python img2docx.py --input=./inputs/imgs/chap4.png --output=./detail_img 
 - Note: Following the step if you translate in KR,JP,CH to see in terminal : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
 
 Still update
-fix spell_correction eng and vi
 just translate 3/4 phrase
