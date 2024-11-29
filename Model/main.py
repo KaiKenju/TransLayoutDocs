@@ -103,6 +103,11 @@ class TranslationLayoutRecovery:
 
     def translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
         """Backend function for translating PDF files."""
+        
+        # debug
+        print(f"Translating PDF: {input_path}")
+        print(f"Expected output directory: {output_path}")
+        
         pdf_images = convert_from_path(
             input_path, 
             dpi=self.DPI, 

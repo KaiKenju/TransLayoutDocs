@@ -251,67 +251,63 @@ class CreatePDF(APIView):
 
 class ProcessTranslation(APIView):
     def post(self, request, *args, **kwargs):
-        """
-        Handles a POST request to translate a pdf file.
-
-        Parameters:
-            request (HttpRequest): The HTTP request object.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            Response: The HTTP response object.
-
-        Raises:
-            Exception: If there is an error processing the request.
-        """
         translation_data = request.data
         try:
             if PDF.objects.filter(pdf_id=translation_data["file_input"]).exists():
                 file_input = PDF.objects.get(pdf_id=translation_data["file_input"])
 
-                # get the random number of file
                 random_number = str(file_input.file).split("/")[-1].split("_")[-1].split(".")[0]
-                # get file name
                 input_name = str(file_input.file_name).split(".")[0] + "_" + random_number + ".pdf"
-                
                 output_name = (
                     str(file_input.file_name).split(".")[0] + "_translated_" + str(translation_data["language"]) + ".pdf"
                 )
-
                 random_output_name = str(file_input.file_name).split(".")[0] + "_" + random_number + "_translated_" + str(translation_data["language"]) + ".pdf"
 
-                # get language
                 original_language = file_input.language
                 target_language = translation_data["language"]
 
-                # main process...
-                # upload file just saved to firebase storage
                 file_name_input = os.path.join(pdf_folder, input_name)
                 file_name_output = os.path.join(pdf_folder, random_output_name)
-                
-                
-                # TODO: process file_output by using AI model and update later...
+
+                # Process the file
                 obj.translate_pdf(
                     language=target_language,
                     input_path=file_name_input,
                     output_path=pdf_folder,
                     merge=False,
                 )
-                
-                temp_file = os.path.join(pdf_folder, input_name.split(".")[0] + "_translated_" + target_language + ".pdf")
+                print(f"Expected output: {os.path.join(pdf_folder, input_name.split('.')[0] + '_translated_' + target_language + '.pdf')}")
+
+                temp_file = os.path.join(
+                    pdf_folder, input_name.split(".")[0] + "_translated_" + target_language + ".pdf"
+                )
+
+                # Verify temp_file existence before copying
+                if not os.path.exists(temp_file):
+                    print(f"Temp file generation failed. Expected path: {temp_file}")
+                    print(f"Contents of the directory: {os.listdir(pdf_folder)}")
+                    
+                    # Fallback: Search for matching files
+                    import glob
+                    temp_files = glob.glob(
+                        os.path.join(pdf_folder, f"{input_name.split('.')[0]}_translated_*.pdf")
+                    )
+                    if temp_files:
+                        temp_file = temp_files[0]  # Use the first matching file
+                        print(f"Found translated file: {temp_file}")
+                    else:
+                        raise FileNotFoundError(f"Temporary file not found: {temp_file}")
+
 
                 shutil.copyfile(temp_file, file_name_output)
                 os.remove(temp_file)
-                
+
                 bucket = storage.bucket()
                 blob = bucket.blob(random_output_name)
                 blob.upload_from_filename(file_name_output)
 
-                # make public access from the URL
                 blob.make_public()
 
-                # delete original pdf and output pdf just saved from pdf folder
                 os.remove(file_name_input)
                 os.remove(file_name_output)
 
@@ -323,47 +319,40 @@ class ProcessTranslation(APIView):
                 )
                 new_pdf.save()
 
-                current_data = {}
-                current_data["status"] = 1
-                current_data["file_input"] = file_input.pdf_id
-                current_data["file_output"] = new_pdf.pdf_id
+                current_data = {
+                    "status": 1,
+                    "file_input": file_input.pdf_id,
+                    "file_output": new_pdf.pdf_id,
+                }
                 translation_serializer = TranslationSerializer(data=current_data)
                 if translation_serializer.is_valid():
                     translation_serializer.save()
                     current_data = translation_serializer.data
-                    current_data.update({"file_input_url": file_input.getFileUrl(), "file_output_url": new_pdf.getFileUrl()})
-                    return Response(
-                        {"status": "success", "data": current_data},
-                        status=status.HTTP_200_OK,
-                    )
-                return Response(
-                    {"status": "error", "data": translation_serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                    current_data.update({
+                        "file_input_url": file_input.getFileUrl(),
+                        "file_output_url": new_pdf.getFileUrl(),
+                    })
+                    return Response({"status": "success", "data": current_data}, status=status.HTTP_200_OK)
+                return Response({"status": "error", "data": translation_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
             else:
-                current_data = {}
-                current_data["status"] = -1
-                current_data["file_input"] = translation_data["file_input"]
-                current_data["file_output"] = "Null"
+                current_data = {
+                    "status": -1,
+                    "file_input": translation_data["file_input"],
+                    "file_output": "Null",
+                }
                 translation_serializer = TranslationSerializer(data=current_data)
                 if translation_serializer.is_valid():
                     translation_serializer.save()
-                    return Response(
-                        {"status": "failure", "data": translation_serializer.data},
-                        status=status.HTTP_200_OK,
-                    )
-                return Response(
-                    {"status": "error", "data": "Invalid request"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                    return Response({"status": "failure", "data": translation_serializer.data}, status=status.HTTP_200_OK)
+                return Response({"status": "error", "data": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             import traceback
             print(f"Error: {e}")
             traceback.print_exc()
-            return Response(
-                {"status": "error", "data": str(e)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"status": "error", "data": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class GetTranslationData(APIView):
     def post(self, request, *args, **kwargs):
