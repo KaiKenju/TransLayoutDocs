@@ -4,26 +4,44 @@ import cv2
 import torch
 from paddleocr import PPStructure, save_structure_res
 from Recovery.recovery_to_doc import sorted_layout_boxes, convert_info_docx
+from image_processing import *
 
 def process_image(input_path, output_path, lang, device):
+    """
+    Pipeline xử lý tuần tự các bước tiền xử lý ảnh:
+    1. Đọc ảnh từ file.
+    2. Resize ảnh theo tỷ lệ để đảm bảo kích thước nằm trong max_dim.
+    3. Biến đổi phối cảnh (nếu phát hiện được tứ giác).
+    4. Trả về ảnh đã qua xử lý.
+    """
+    #1
     if not os.path.exists(output_path):
         os.makedirs(output_path, exist_ok=True)  
         print(f"Output folder created: {output_path}")
     else:
         print(f"Output folder already exists: {output_path}")
-    table_engine = PPStructure(recovery=True, drop_score=0.3, return_ocr_result_in_table=True)
-    
+    table_engine = PPStructure(recovery=True, drop_score=0.3, 
+                               return_ocr_result_in_table=True,
+                               det_db_box_thresh=0.2,       # Ngưỡng phát hiện hộp
+                               det_db_unclip_ratio=1.3, )   # Tỉ lệ mở rộng hộp
+    #1
     img = cv2.imread(input_path)
     if img is None:
         raise FileNotFoundError(f"Image not found at {input_path}")
     
+    
+    # #2
+    # resized_img = resize_image(img, max_dim=900) 
+    # #3
+    # transformed_img = detect_and_transform_quadrilaterals(resized_img, expansion=10)
     result = table_engine(img)
+                          
     save_structure_res(result, output_path, os.path.basename(input_path).split('.')[0])
 
     for line in result:
         line.pop('img')
         print(line)
-
+    #4
     h, w, _ = img.shape
     res = sorted_layout_boxes(result, w)
     convert_info_docx(img, res, output_path, os.path.basename(input_path).split('.')[0], lang, device)
@@ -42,4 +60,4 @@ if __name__ == "__main__":
 
     process_image(args.input_path, args.output_path, args.lang, device)
 
-#python img2docx.py --input=./inputs/imgs/chap4.png --output=./detail_img --lang=vi --device=cpu
+#python img2docx.py --input=./inputs/imgs/develop.png --output=./detail_img --lang=vi --device=cpu

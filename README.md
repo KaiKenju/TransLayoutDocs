@@ -99,4 +99,5 @@ Usage: python img2docx.py --input=./inputs/imgs/chap4.png --output=./detail_img 
 - Note: Following the step if you translate in KR,JP,CH to see in terminal : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
 
 Still update
-just translate 3/4 phrase
+xong perspective,
+lỗi ghép câu hoàn chỉnh để dịch.

@@ -202,13 +202,56 @@ def convert_info_docx(img, res, save_folder, img_name,lang, device='cpu'):
             seen_texts = set()
             complete_paragraph = ""
             current_sentence = ""
+            # for i, line in enumerate(region["res"]):
+            #     if i == 0:
+            #         paragraph_format.first_line_indent = shared.Inches(0.25)
+            #     original_text = line["text"].strip()
+            #     # print(f"OCR Output: {original_text}")
+            #     corrected_text = spell_checker(original_text)[0]['generated_text']
+            #     # print(f"Spell Correction: {corrected_text}")
+
+            #     if corrected_text in seen_texts:
+            #         continue
+            #     seen_texts.add(corrected_text)
+
+            #     if current_sentence and not current_sentence.endswith(" "):
+            #         current_sentence += " "
+                
+            #     # Thêm văn bản hiện tại
+            #     current_sentence +=  corrected_text
+            #     if corrected_text.endswith((".", "!", "?")):
+            #         # corrected_text = spell_checker(original_text)[0]['generated_text']
+                    
+            #         translated_text = translate(current_sentence.strip(), lang=lang,device=device)
+            #         if lang=="vi":
+            #              corrected_translated_text = correct_spelling(translated_text)
+            #         else:
+            #             print("KhÔNG Phải ngôn ngữ Vi nên ko check spell correction được")
+            #         print("\nOriginal:", current_sentence.strip())
+            #         print("\nTranslated&Correct:", corrected_translated_text)
+            #         print("------------------------------------")
+            #         complete_paragraph += current_sentence + " "
+            #         text_run = paragraph.add_run(corrected_translated_text + " ")
+            #         text_run.font.size = shared.Pt(12)
+                    
+                
+            #         current_sentence = ""
             for i, line in enumerate(region["res"]):
                 if i == 0:
                     paragraph_format.first_line_indent = shared.Inches(0.25)
+                
                 original_text = line["text"].strip()
-                # print(f"OCR Output: {original_text}")
+                # Gọi mô hình chỉnh sửa chính tả
                 corrected_text = spell_checker(original_text)[0]['generated_text']
-                # print(f"Spell Correction: {corrected_text}")
+
+                # Kiểm tra và loại bỏ dấu chấm không cần thiết
+                if not original_text.endswith((".", "!", "?")) and corrected_text.endswith((".", "!", "?")):
+                    corrected_text = corrected_text.rstrip(".!?")
+
+                # Kiểm tra và sửa ký tự đầu nếu cần
+                if original_text and corrected_text:
+                    if original_text[0].islower() and corrected_text[0].isupper():
+                        corrected_text = corrected_text[0].lower() + corrected_text[1:]
 
                 if corrected_text in seen_texts:
                     continue
@@ -216,26 +259,30 @@ def convert_info_docx(img, res, save_folder, img_name,lang, device='cpu'):
 
                 if current_sentence and not current_sentence.endswith(" "):
                     current_sentence += " "
-                
+
                 # Thêm văn bản hiện tại
-                current_sentence +=  corrected_text
+                current_sentence += corrected_text
                 if corrected_text.endswith((".", "!", "?")):
-                    # corrected_text = spell_checker(original_text)[0]['generated_text']
+                    # Dịch đoạn văn bản hiện tại
+                    translated_text = translate(current_sentence.strip(), lang=lang, device=device)
                     
-                    translated_text = translate(current_sentence.strip(), lang=lang,device=device)
-                    if lang=="vi":
-                         corrected_translated_text = correct_spelling(translated_text)
+                    if lang == "vi":
+                        corrected_translated_text = correct_spelling(translated_text)
                     else:
-                        print("KhÔNG Phải ngôn ngữ Vi nên ko check spell correction được")
+                        print("Không phải ngôn ngữ VI nên không kiểm tra chính tả được")
+                    
                     print("\nOriginal:", current_sentence.strip())
                     print("\nTranslated&Correct:", corrected_translated_text)
                     print("------------------------------------")
+                    
+                    # Thêm văn bản vào đoạn hoàn chỉnh
                     complete_paragraph += current_sentence + " "
                     text_run = paragraph.add_run(corrected_translated_text + " ")
                     text_run.font.size = shared.Pt(12)
-                    
-                
+
+                    # Reset câu hiện tại
                     current_sentence = ""
+
 
             if current_sentence.strip():
                 # corrected_text = spell_checker(current_sentence)[0]['generated_text']
@@ -245,7 +292,7 @@ def convert_info_docx(img, res, save_folder, img_name,lang, device='cpu'):
                     corrected_translated_text = correct_spelling(translated_text)
                 else:
                     print("KhÔNG Phải ngôn ngữ Vi nên ko check spell correction được")
-                # print("\nOriginal(Remaining):", current_sentence.strip())
+                print("\nOriginal(Remaining):", current_sentence.strip())
                 print("\nTranslated(Remaining):", corrected_translated_text)
                 print("------------------------------------")
                 complete_paragraph += current_sentence + " "
@@ -257,12 +304,11 @@ def convert_info_docx(img, res, save_folder, img_name,lang, device='cpu'):
             if complete_paragraph.strip():
                 print("\nComplete Paragraph:")
                 print(complete_paragraph)
-
-    # save to docx
+                
+         # save to docx
     docx_path = os.path.join(save_folder, "{}_ocr.docx".format(img_name))
     doc.save(docx_path)
-    logger.info("docx save to {}".format(docx_path))
-
+    logger.info("docx save to {}".format(docx_path))   
 
 def sorted_layout_boxes(res, w):
     """
