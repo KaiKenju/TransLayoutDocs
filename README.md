@@ -98,6 +98,30 @@ Usage: python img2docx.py --input=./inputs/imgs/chap4.png --output=./detail_img 
 
 - Note: Following the step if you translate in KR,JP,CH to see in terminal : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
 
+## Contributer
+
+- Special thanks to all the developers who have contributed to TransLayoutDocs! 
+
+<table id='Contributes'>
+<tr align='center'>
+    <td id='KaiKenju'>
+        <a href='https://github.com/KaiKenju'>
+            <img src='https://github.com/KaiKenju.png' width='140px;' style='border-radius: 99999px;'>
+        </a>
+        <br>
+        <a href='https://www.linkedin.com/in/hiep-dinh-a23bb52b8/'>KaiKenju</a>
+    </td>
+    <td id='hungtrieu07'>
+        <a href='https://github.com/hungtrieu07'>
+            <img src='https://github.com/hungtrieu07.png' width='140px;'>
+        </a>
+        <br>
+        <a href='https://www.linkedin.com/in/hungtrieu07/'>hungtrieu07</a>
+    </td>
+    
+</tr>
+
+## Working
 Still update
 xong perspective,
 lỗi ghép câu hoàn chỉnh để dịch.
