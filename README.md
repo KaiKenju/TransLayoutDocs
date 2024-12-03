@@ -1,5 +1,5 @@
 # TransLayoutDocs
-Phát triển  TableEngine của PaddleOCR để khôi phục bố cục và hỗ trợ dịch thuật tài liệu
+Translate documents, recreate layouts, convert PDF to Word, PaddleOCR, Image to Word.
 
 <div align="center">
 <!-- width=120 height=120 -->
