@@ -93,7 +93,8 @@ Usage: python img2docx.py --input=./inputs/imgs/chap4.png --output=./detail_img 
 
   --input              Input img . Default: inputs
   --output             Output folder. Default: detail_img
-  --device             cpu or cuda. Default: cpu
+  --lang               Languague to translate. Default: vi
+  --device             Cpu or cuda. Default: cpu
 ```
 
 - Note: Following the step if you translate in KR,JP,CH to see in terminal : [here](https://www.youtube.com/watch?v=DQAox26W4s8)
@@ -106,14 +107,14 @@ Special thanks to all the developers who have contributed to TransLayoutDocs!
 <tr align='center'>
     <td id='KaiKenju'>
         <a href='https://github.com/KaiKenju'>
-            <img src='https://github.com/KaiKenju.png' width='140px;' style='border-radius: 100px; border: 2px solid #000;'>
+            <img src='https://github.com/KaiKenju.png' width='100px;' style='border-radius: 100px; border: 2px solid #000;'>
         </a>
         <br>
         <a href='https://www.linkedin.com/in/hiep-dinh-a23bb52b8/'>KaiKenju</a>
     </td>
     <td id='hungtrieu07'>
         <a href='https://github.com/hungtrieu07'>
-            <img src='https://github.com/hungtrieu07.png' width='140px;' style='border: 2px solid #000; border-radius: 100px;'>
+            <img src='https://github.com/hungtrieu07.png' width='100px;' style='border: 2px solid #000; border-radius: 100px;'>
         </a>
         <br>
         <a href='https://www.linkedin.com/in/hungtrieu07/'>hungtrieu07</a>
