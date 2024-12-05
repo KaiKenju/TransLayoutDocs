@@ -79,8 +79,18 @@ pip install -r requirements.txt
 ```
 
 # Quick Start
+- Scan PDF (using OCR)
 ```[bash]
 python main.py
+```
+
+- Standard PDF
+```[bash]
+!python predict_pdf.py \
+    --image_dir=inputs\pdf\2009.09941v3.pdf \
+    --recovery=True \
+    --use_pdf2docx_api=True \
+    --output=/content/sample_data/
 ```
 
 - Image to Word
