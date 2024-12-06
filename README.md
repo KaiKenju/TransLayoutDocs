@@ -53,7 +53,13 @@ This diagram introduces the Layout Translation Extraction process we developed b
 - Image: RecoveryLayout + Translate
  
 <div align="center">
-    <img src="assets/layout_trans.png" width="800">
+    <img src="assets/compare_vi.png" width="800">
+</div>
+
+- PDF standard: RecoveryLayout 
+ 
+<div align="center">
+    <img src="assets/pdf2word.png" width="800">
 </div>
 
 # Installization 
@@ -86,11 +92,7 @@ python main.py
 
 - Standard PDF
 ```[bash]
-!python predict_pdf.py \
-    --image_dir=inputs\pdf\2009.09941v3.pdf \
-    --recovery=True \
-    --use_pdf2docx_api=True \
-    --output=/content/sample_data/
+python predict_pdf.py --image_dir=inputs\pdf\2009.09941v3.pdf --recovery=True --use_pdf2docx_api=True --output=./outputs/
 ```
 
 - Image to Word

@@ -21,3 +21,5 @@ torchvision==0.15.2
 torchaudio==2.0.2 
 #sacremoses.
 pyspellchecker
+PyMuPDF
+pdf2docx

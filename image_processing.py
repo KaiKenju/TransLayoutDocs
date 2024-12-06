@@ -79,17 +79,17 @@ def order_points(pts):
     return rect
 
 
-def detect_and_transform_quadrilaterals(img, expansion=10):
+def detect_and_transform_largest_quadrilateral(image_path, expansion=10):
     """
-    Phát hiện các vùng văn bản và áp dụng biến đổi phối cảnh lên tứ giác bao quanh chúng.
+    Phát hiện vùng văn bản lớn nhất (hợp nhất từ các contour nhỏ hơn),
+    và áp dụng biến đổi phối cảnh.
     """
-    # Chuyển đổi sang ảnh grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Đọc ảnh đầu vào
+    image = cv2.imread(image_path)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # Giảm nhiễu bằng GaussianBlur
+    # Làm mờ và phát hiện cạnh
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    # Dùng Canny để phát hiện cạnh
     edges = cv2.Canny(blurred, 50, 150)
 
     # Dùng Morphology để kết nối các cạnh
@@ -99,51 +99,45 @@ def detect_and_transform_quadrilaterals(img, expansion=10):
     # Tìm các contour
     contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+    # Hợp nhất tất cả contour thành một hình bao quanh lớn nhất
     all_points = []
-
     for contour in contours:
-        if cv2.contourArea(contour) < 1000:  # Bỏ qua các contour quá nhỏ
-            continue
+        if cv2.contourArea(contour) > 1000:  # Bỏ qua contour nhỏ
+            all_points.extend(contour[:, 0, :])
 
-        # Tìm hình chữ nhật xoay nhỏ nhất bao quanh contour
-        rect = cv2.minAreaRect(contour)
-        box = cv2.boxPoints(rect)
-        box = np.intp(box)
+    if not all_points:
+        print("Không tìm thấy khối văn bản đủ lớn.")
+        return None
 
-        # Tính tâm của tứ giác
-        center_x = np.mean(box[:, 0])
-        center_y = np.mean(box[:, 1])
-
-        # Mở rộng các đỉnh ra xa tâm
-        expanded_box = []
-        for point in box:
-            x_new = int(point[0] + (point[0] - center_x) * (expansion / 100))
-            y_new = int(point[1] + (point[1] - center_y) * (expansion / 100))
-            expanded_box.append([x_new, y_new])
-
-        expanded_box = np.array(expanded_box, dtype=np.float32)
-
-        # Sắp xếp lại các điểm
-        ordered_box = order_points(expanded_box)
-        all_points.extend(ordered_box)
-
-    # Tính toán tứ giác bao quanh tất cả các điểm
+    # Tạo convex hull bao quanh tất cả các điểm
     all_points = np.array(all_points, dtype=np.float32)
     hull = cv2.convexHull(all_points)
 
-    # Lấy các đỉnh của tứ giác bao quanh
+    # Tính toán tứ giác bao quanh vùng hợp nhất
     rect = cv2.minAreaRect(hull)
-    box = cv2.boxPoints(rect)
+    box = cv2.boxPoints(rect)  # Lấy 4 đỉnh của tứ giác
     box = np.intp(box)
-    ordered_box = order_points(box)
 
-    # Tính kích thước mới
+    # Mở rộng các cạnh ra xa tâm
+    center_x = np.mean(box[:, 0])
+    center_y = np.mean(box[:, 1])
+    expanded_box = []
+    for point in box:
+        x_new = int(point[0] + (point[0] - center_x) * (expansion / 100))
+        y_new = int(point[1] + (point[1] - center_y) * (expansion / 100))
+        expanded_box.append([x_new, y_new])
+    expanded_box = np.array(expanded_box, dtype=np.float32)
+
+    # Sắp xếp lại các điểm
+    ordered_box = order_points(expanded_box)
+
+    # Tính kích thước cho hình ảnh sau biến đổi
     width = max(np.linalg.norm(ordered_box[0] - ordered_box[1]),
                 np.linalg.norm(ordered_box[2] - ordered_box[3]))
     height = max(np.linalg.norm(ordered_box[0] - ordered_box[3]),
                  np.linalg.norm(ordered_box[1] - ordered_box[2]))
 
-    # Điểm đích
+    # Định nghĩa điểm đích (hình chữ nhật)
     dst_points = np.array([
         [0, 0],
         [width - 1, 0],
@@ -155,6 +149,8 @@ def detect_and_transform_quadrilaterals(img, expansion=10):
     M = cv2.getPerspectiveTransform(ordered_box, dst_points)
 
     # Áp dụng biến đổi phối cảnh
-    transformed = cv2.warpPerspective(img, M, (int(width), int(height)), flags=cv2.INTER_CUBIC)
+    transformed = cv2.warpPerspective(image, M, (int(width), int(height)), flags=cv2.INTER_CUBIC)
+
+    # Trả về ảnh đã biến đổi
     print("Đã biến đổi ảnh perspective")
     return transformed

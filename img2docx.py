@@ -33,7 +33,7 @@ def process_image(input_path, output_path, lang, device):
     # #2
     # resized_img = resize_image(img, max_dim=900) 
     # #3
-    # transformed_img = detect_and_transform_quadrilaterals(resized_img, expansion=10)
+    # transformed_img = detect_and_transform_quadrilaterals(img, expansion=10)
     result = table_engine(img)
                           
     save_structure_res(result, output_path, os.path.basename(input_path).split('.')[0])
@@ -60,4 +60,4 @@ if __name__ == "__main__":
 
     process_image(args.input_path, args.output_path, args.lang, device)
 
-#python img2docx.py --input=./inputs/imgs/develop.png --output=./detail_img --lang=vi --device=cpu
+#python img2docx.py --input=./inputs/imgs/chap4.png --output=./detail_img --lang=vi --device=cpu
